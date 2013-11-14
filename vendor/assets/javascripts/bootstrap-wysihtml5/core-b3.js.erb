@@ -121,6 +121,30 @@
                 "<li><div class='wysihtml5-colors' data-wysihtml5-command-value='orange'></div><a class='wysihtml5-colors-title' data-wysihtml5-command='foreColor' data-wysihtml5-command-value='orange'>" + locale.colours.orange + "</a></li>" +
               "</ul>" +
             "</li>";
+        },
+        "medium": function(locale, options){
+           var size = (options && options.size) ? ' btn-'+options.size : '';
+            return "<li>" +
+              "<div class='bootstrap-wysihtml5-insert-medium-modal modal fade' id='wysi-modal'>" +
+                "<span id='chosen-medium'></span>" +
+                "<div class='modal-dialog'>" +
+                  "<div class='modal-content'>" +
+                    "<div class='modal-header'>" +
+                      "<a class='close' data-dismiss='modal'>&times;</a>" +
+                      "<h3 class='modal-title'>" + locale.image.insert + "</h3>" +
+                    "</div>" +
+                    "<div class='modal-body'>" +
+                      "<iframe class='mediapool-iframe' src='' data-src='<%= Mediapool::Engine.routes.url_helpers.iframe_medias_path(size_chooser: true) %>'></iframe>" +
+                    "</div>" +
+                    "<div class='modal-footer'>" +
+                      "<a href='#' class='btn btn-default' data-dismiss='modal'>" + locale.image.cancel + "</a>" +
+                      "<a href='#' class='btn btn-primary' style='display: none;' data-dismiss='modal'>" + locale.image.insert + "</a>" +
+                    "</div>" +
+                  "</div>" +
+                "</div>" +
+              "</div>" +
+              "<a class='btn btn-default btn" + size + "' data-wysihtml5-command='insertMedium' title='" + locale.image.insert + "' tabindex='-1'><i class='glyphicon glyphicon-picture'></i></a>" +
+            "</li>";
         }
     };
 
@@ -133,6 +157,7 @@
         this.el = el;
         var toolbarOpts = options || defaultOptions;
         for(var t in toolbarOpts.customTemplates) {
+          console.log(t);
           tpl[t] = toolbarOpts.customTemplates[t];
         }
         this.toolbar = this.createToolbar(el, toolbarOpts);
@@ -155,7 +180,7 @@
 
         createEditor: function(options) {
             options = options || {};
-            
+
             // Add the toolbar to a clone of the options object so multiple instances
             // of the WYISYWG don't break because "toolbar" is already defined
             options = $.extend(true, {}, options);
@@ -188,7 +213,6 @@
                 } else {
                     value = defaultOptions[key];
                 }
-
                 if(value === true) {
                     toolbar.append(templates(key, locale[culture], options));
 
@@ -202,6 +226,10 @@
 
                     if(key === "image") {
                         this.initInsertImage(toolbar);
+                    }
+
+                    if(key === "medium"){
+                        this.initInsertMedium(toolbar);
                     }
                 }
             }
@@ -229,6 +257,59 @@
             return toolbar;
         },
 
+        initInsertMedium: function(toolbar){
+            var self = this;
+            var insertImageModal = toolbar.find('.bootstrap-wysihtml5-insert-medium-modal');
+            var urlInput = insertImageModal.find('.bootstrap-wysihtml5-insert-medium-url');
+            var medium = insertImageModal.find('span#chosen-medium');
+            var insertButton = insertImageModal.find('a.btn-primary');
+            var initialValue = urlInput.val();
+            var caretBookmark;
+            var xhrFetchingMedium;
+
+            var chooser = insertImageModal.find('.image_chooser.images');
+
+            var optionTemplate = '';
+
+
+            var insertMedium = function() {
+
+                self.editor.currentView.element.focus();
+                if(caretBookmark){
+                    self.editor.composer.selection.setBookmark(caretBookmark);
+                    caretBookmark = null;
+                }
+                self.editor.composer.commands.exec('insertMedium',
+                    medium.data());
+            };
+
+            insertButton.click(insertMedium);
+
+            insertImageModal.on('hidden.bs.modal', function(e) {
+                self.editor.currentView.element.focus();
+            });
+
+            toolbar.find('a[data-wysihtml5-command=insertMedium]').click(function() {
+                var activeButton = $(this).hasClass("wysihtml5-command-active");
+
+                $('.bootstrap-wysihtml5-insert-medium-modal iframe').
+                    attr('src', $('.bootstrap-wysihtml5-insert-medium-modal iframe').data('src'));
+
+                if (!activeButton) {
+                    self.editor.currentView.element.focus(false);
+                    caretBookmark = self.editor.composer.selection.getBookmark();
+                    insertImageModal.appendTo('body').modal('show');
+                    insertImageModal.on('click.dismiss.modal', '[data-dismiss="modal"]', function(e) {
+                        e.stopPropagation();
+                    });
+                    return false;
+                }
+                else {
+                    return true;
+                }
+            });
+        },
+
         initHtml: function(toolbar) {
             var changeViewSelector = "a[data-wysihtml5-action='change_view']";
             toolbar.find(changeViewSelector).click(function(e) {
@@ -252,6 +333,7 @@
                   self.editor.composer.selection.setBookmark(caretBookmark);
                   caretBookmark = null;
                 }
+                console.log('is in here!');
                 self.editor.composer.commands.exec("insertImage", url);
             };
 
@@ -269,6 +351,7 @@
             });
 
             insertImageModal.on('hide', function() {
+                console.log('the wrong thing is hidden');
                 self.editor.currentView.element.focus();
             });
 
@@ -276,6 +359,7 @@
                 var activeButton = $(this).hasClass("wysihtml5-command-active");
 
                 if (!activeButton) {
+                    console.log('foo');
                     self.editor.currentView.element.focus(false);
                     caretBookmark = self.editor.composer.selection.getBookmark();
                     insertImageModal.appendTo('body').modal('show');
@@ -285,6 +369,7 @@
                     return false;
                 }
                 else {
+                    console.log('bar');
                     return true;
                 }
             });
@@ -387,7 +472,7 @@
             return methods.init.apply( this, arguments );
         } else {
             $.error( 'Method ' +  method + ' does not exist on jQuery.wysihtml5' );
-        }    
+        }
     };
 
     $.fn.wysihtml5.Constructor = Wysihtml5;
@@ -399,7 +484,8 @@
         "lists": true,
         "html": false,
         "link": true,
-        "image": true,
+        "image": false,
+        "medium": true,
         events: {},
         parserRules: {
             classes: {
