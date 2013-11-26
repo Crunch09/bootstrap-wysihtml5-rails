@@ -7573,6 +7573,112 @@ wysihtml5.Commands = Base.extend(
     }
   };
 })(wysihtml5);(function(wysihtml5) {
+  var NODE_NAME = "SPAN";
+  var dom = wysihtml5.dom;
+
+  wysihtml5.commands.insertGallery = {
+    /**
+     * Inserts an <img>
+     * If selection is already an image link, it removes it
+     *
+     * @example
+     *    // either ...
+     *    wysihtml5.commands.insertImage.exec(composer, "insertImage", "http://www.google.de/logo.jpg");
+     *    // ... or ...
+     *    wysihtml5.commands.insertImage.exec(composer, "insertImage", { src: "http://www.google.de/logo.jpg", title: "foo" });
+     */
+    exec: function(composer, command, value) {
+      value = typeof(value) === "object" ? value : { src: value };
+
+      var doc     = composer.doc,
+          gallery   = this.state(composer),
+          textNode,
+          i,
+          parent;
+
+      if (gallery) {
+        // gallery already selected, set the caret before it and delete it
+        // composer.selection.setBefore(gallery);
+        // parent = gallery.parentNode;
+        // parent.removeChild(gallery);
+
+        // // and it's parent <a> too if it hasn't got any other relevant child nodes
+        // wysihtml5.dom.removeEmptyTextNodes(parent);
+        // if (parent.nodeName === "A" && !parent.firstChild) {
+        //   composer.selection.setAfter(parent);
+        //   parent.parentNode.removeChild(parent);
+        // }
+
+        // firefox and ie sometimes don't remove the gallery handles, even though the gallery got removed
+        wysihtml5.quirks.redraw(composer.element);
+        return;
+      }
+
+      gallery = doc.createElement(NODE_NAME);
+      gallery.className = 'liquid_span'
+      // for (i in value) {
+      //   gallery[i] = value[i];
+      // }
+      var cntnt = '{% medium '+ value['id'] +', gallery %}';
+      dom.setTextContent(gallery, cntnt);
+
+      composer.selection.insertNode(gallery);
+      if (wysihtml5.browser.hasProblemsSettingCaretAfterImg()) {
+        textNode = doc.createTextNode(wysihtml5.INVISIBLE_SPACE);
+        composer.selection.insertNode(textNode);
+        composer.selection.setAfter(textNode);
+      } else {
+        composer.selection.setAfter(gallery);
+      }
+    },
+
+    state: function(composer) {
+      var doc = composer.doc,
+          selectedNode,
+          text,
+          imagesInSelection;
+
+      if (!wysihtml5.dom.hasElementWithTagName(doc, NODE_NAME)) {
+        return false;
+      }
+
+      selectedNode = composer.selection.getSelectedNode();
+      if (!selectedNode) {
+        return false;
+      }
+
+      if (selectedNode.nodeName === NODE_NAME) {
+        // This works perfectly in IE
+        return selectedNode;
+      }
+
+      if (selectedNode.nodeType !== wysihtml5.ELEMENT_NODE) {
+        return false;
+      }
+
+      text = composer.selection.getText();
+      text = wysihtml5.lang.string(text).trim();
+      if (text) {
+        return false;
+      }
+
+      imagesInSelection = composer.selection.getNodes(wysihtml5.ELEMENT_NODE, function(node) {
+        return node.nodeName === "SPAN";
+      });
+
+      if (imagesInSelection.length !== 1) {
+        return false;
+      }
+
+      return imagesInSelection[0];
+    },
+
+    value: function(composer) {
+      var image = this.state(composer);
+      return image && image.src;
+    }
+  };
+})(wysihtml5);(function(wysihtml5) {
   var undef,
       LINE_BREAK = "<br>" + (wysihtml5.browser.needsSpaceAfterLineBreak() ? " " : "");
 
