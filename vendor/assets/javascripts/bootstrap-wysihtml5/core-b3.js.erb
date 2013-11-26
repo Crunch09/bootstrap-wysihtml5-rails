@@ -134,6 +134,7 @@
                       "<h3 class='modal-title'>" + locale.image.insert + "</h3>" +
                     "</div>" +
                     "<div class='modal-body'>" +
+                      "<img class='spinner' src='/assets/mediapool/ajax-loader.gif' />" +
                       "<iframe class='mediapool-iframe' src='' data-src='<%= Mediapool::Engine.routes.url_helpers.iframe_medias_path(size_chooser: true) %>'></iframe>" +
                     "</div>" +
                     "<div class='modal-footer'>" +
@@ -144,6 +145,32 @@
                 "</div>" +
               "</div>" +
               "<a class='btn btn-default btn" + size + "' data-wysihtml5-command='insertMedium' title='" + locale.image.insert + "' tabindex='-1'><i class='glyphicon glyphicon-picture'></i></a>" +
+            "</li>";
+        },
+        "gallery": function(locale, options){
+           <% sr = SecureRandom.hex %>
+           var size = (options && options.size) ? ' btn-'+options.size : '';
+            return "<li>" +
+              "<div class='bootstrap-wysihtml5-insert-gallery-modal modal fade' id='wysi-gallery-<%= sr %>'>" +
+                "<span id='chosen-gallery'></span>" +
+                "<div class='modal-dialog'>" +
+                  "<div class='modal-content'>" +
+                    "<div class='modal-header'>" +
+                      "<a class='close' data-dismiss='modal'>&times;</a>" +
+                      "<h3 class='modal-title'>" + locale.gallery.insert + "</h3>" +
+                    "</div>" +
+                    "<div class='modal-body'>" +
+                      "<img class='spinner' src='/assets/mediapool/ajax-loader.gif' />" +
+                      "<iframe class='mediapool-iframe' src='' data-src='<%= Mediapool::Engine.routes.url_helpers.gallery_medias_path %>' data-parent='wysi-gallery-<%= sr %>'></iframe>" +
+                    "</div>" +
+                    "<div class='modal-footer'>" +
+                      "<a href='#' class='btn btn-default' data-dismiss='modal'>" + locale.gallery.cancel + "</a>" +
+                      "<a href='#' class='btn btn-primary' style='display: none;' data-dismiss='modal'>" + locale.gallery.insert + "</a>" +
+                    "</div>" +
+                  "</div>" +
+                "</div>" +
+              "</div>" +
+              "<a class='btn btn-default btn" + size + "' data-wysihtml5-command='insertGallery' title='" + locale.gallery.insert + "' tabindex='-1'><i class='glyphicon glyphicon-picture'></i></a>" +
             "</li>";
         }
     };
@@ -231,6 +258,10 @@
                     if(key === "medium"){
                         this.initInsertMedium(toolbar);
                     }
+
+                    if(key === "gallery"){
+                        this.initInsertGallery(toolbar);
+                    }
                 }
             }
 
@@ -290,10 +321,72 @@
             });
 
             toolbar.find('a[data-wysihtml5-command=insertMedium]').click(function() {
+                $(this).parent().find('.spinner').show();
                 var activeButton = $(this).hasClass("wysihtml5-command-active");
 
-                $('.bootstrap-wysihtml5-insert-medium-modal iframe').
+                $(this).parent().find('.mediapool-iframe').
                     attr('src', $('.bootstrap-wysihtml5-insert-medium-modal iframe').data('src'));
+
+                $(this).parent().find('iframe').load(function(){
+                  $(this).parent().find('.spinner').hide();
+                });
+
+                if (!activeButton) {
+                    self.editor.currentView.element.focus(false);
+                    caretBookmark = self.editor.composer.selection.getBookmark();
+                    insertImageModal.appendTo('body').modal('show');
+                    insertImageModal.on('click.dismiss.modal', '[data-dismiss="modal"]', function(e) {
+                        e.stopPropagation();
+                    });
+                    return false;
+                }
+                else {
+                    return true;
+                }
+            });
+        },
+
+        initInsertGallery: function(toolbar){
+            var self = this;
+            var insertImageModal = toolbar.find('.bootstrap-wysihtml5-insert-gallery-modal');
+            var urlInput = insertImageModal.find('.bootstrap-wysihtml5-insert-gallery-url');
+            var gallery = insertImageModal.find('span#chosen-gallery');
+            var insertButton = insertImageModal.find('a.btn-primary');
+            var initialValue = urlInput.val();
+            var caretBookmark;
+            var xhrFetchingMedium;
+
+
+            var optionTemplate = '';
+
+
+            var insertGallery = function() {
+
+                self.editor.currentView.element.focus();
+                if(caretBookmark){
+                    self.editor.composer.selection.setBookmark(caretBookmark);
+                    caretBookmark = null;
+                }
+                self.editor.composer.commands.exec('insertGallery',
+                    gallery.data());
+            };
+
+            insertButton.click(insertGallery);
+
+            insertImageModal.on('hidden.bs.modal', function(e) {
+                self.editor.currentView.element.focus();
+            });
+
+            toolbar.find('a[data-wysihtml5-command=insertGallery]').click(function() {
+                $(this).parent().find('.spinner').show();
+                var activeButton = $(this).hasClass("wysihtml5-command-active");
+
+                $(this).parent().find('.mediapool-iframe').
+                    attr('src', $(this).parent().find('.mediapool-iframe').data('src'));
+
+                $(this).parent().find('iframe').load(function(){
+                  $(this).parent().find('.spinner').hide();
+                });
 
                 if (!activeButton) {
                     self.editor.currentView.element.focus(false);
@@ -486,6 +579,7 @@
         "link": true,
         "image": false,
         "medium": true,
+        "gallery": true,
         events: {},
         parserRules: {
             classes: {
@@ -545,7 +639,7 @@
             }
         },
         stylesheets: ["<%= stylesheet_path('bootstrap-wysihtml5/wysiwyg-color.css') %>"], // (path_to_project/lib/css/wysiwyg-color.css)
-        locale: "en"
+        locale: 'de'
     };
 
     if (typeof $.fn.wysihtml5.defaultOptionsCache === 'undefined') {
@@ -583,6 +677,10 @@
                 insert: "Insert image",
                 cancel: "Cancel"
             },
+            gallery: {
+                insert: "Insert gallery",
+                cancel: "Cancel"
+            },
             html: {
                 edit: "Edit HTML"
             },
@@ -597,6 +695,58 @@
                 olive: "Olive",
                 navy: "Navy",
                 blue: "Blue",
+                orange: "Orange"
+            }
+        },
+
+        de: {
+            font_styles: {
+                normal: "Standard Text",
+                h1: "Überschrift 1",
+                h2: "Überschrift 2",
+                h3: "Überschrift 3",
+                h4: "Überschrift 4",
+                h5: "Überschrift 5",
+                h6: "Überschrift 6"
+            },
+            emphasis: {
+                bold: "Fett",
+                italic: "Kursiv",
+                underline: "Unterstrichen"
+            },
+            lists: {
+                unordered: "Unsortierte Liste",
+                ordered: "Sortierte Liste",
+                outdent: "Ausrückung",
+                indent: "Einschub"
+            },
+            link: {
+                insert: "Link einsetzen",
+                cancel: "Abbrechen",
+                target: "Link in neuem Tab öffnen"
+            },
+            image: {
+                insert: "Medium einsetzen",
+                cancel: "Abbrechen"
+            },
+            gallery: {
+                insert: "Gallerie einsetzen",
+                cancel: "Abbrechen"
+            },
+            html: {
+                edit: "HTML bearbeiten"
+            },
+            colours: {
+                black: "Schwarz",
+                silver: "Silber",
+                gray: "Grau",
+                maroon: "Kastanienbraun",
+                red: "Rot",
+                purple: "Lila",
+                green: "Grün",
+                olive: "Olivgrün",
+                navy: "Navy",
+                blue: "Blau",
                 orange: "Orange"
             }
         }
