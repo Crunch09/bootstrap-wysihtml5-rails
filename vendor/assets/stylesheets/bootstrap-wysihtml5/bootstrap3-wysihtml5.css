@@ -114,3 +114,17 @@ ul.wysihtml5-toolbar div[data-wysihtml5-command-value="orange"] {
 .glyphicon-quote:after {
   content: "\0000a0";
 }
+
+.gallery-icon{
+  background-image: url('/assets/gallery.jpg');
+  position: relative;
+  top: 1px;
+  display: inline-block;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  width: 14px;
+  height: 14px;
+  background-size: 14px 14px;
+  background-repeat: no-repeat;
+}
